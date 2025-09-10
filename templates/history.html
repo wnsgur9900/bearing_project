@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>분석 히스토리 - Bearing Fault Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: inherit;">
+          <div class="logo-icon" style="color: inherit;">⚙️</div>
+          <span style="color: inherit;">Bearing Fault Analyzer</span>
+        </a>
+        <div class="header-info">
+          <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📚 히스토리</a>
+          <a href="{{ url_for('samples') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📦 샘플 데이터</a>
+          <a href="{{ url_for('manual') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">👀 사용 설명서</a>
+          <button class="theme-toggle" id="themeToggle" aria-label="테마 변경"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">
+          {% for m in messages %}<p>{{ m }}</p>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <h1>📚 분석 히스토리</h1>
+    
+    {% if history %}
+      <!-- Stats Overview -->
+      <div class="card">
+        <h2>📊 히스토리 통계</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{{ history|length }}</div>
+            <div class="stat-label">총 분석 횟수</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{ (history|selectattr('pred', 'equalto', 'Normal')|list|length) }}</div>
+            <div class="stat-label">정상 진단</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{ (history|selectattr('pred', 'equalto', 'Fault')|list|length) }}</div>
+            <div class="stat-label">결함 진단</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{{ (history|selectattr('pred', 'equalto', 'Suspect')|list|length) }}</div>
+            <div class="stat-label">의심 진단</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History List -->
+      <div class="history-list">
+        {% for item in history %}
+        <div class="history-item">
+          <div class="history-header">
+            <div class="history-info">
+              <div class="history-filename">📄 {{ item.filename }}</div>
+              <div class="history-timestamp">{{ item.timestamp[:19].replace('T', ' ') }}</div>
+            </div>
+            <div class="history-result">
+              <span class="badge {{ 'ok' if item.pred=='Normal' else ('bad' if item.pred=='Fault' else 'warn') }}">
+                {{ item.pred }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="history-details">
+            <div class="history-stats">
+              <div class="history-stat">
+                <span class="stat-label">Normal:</span>
+                <span class="stat-value">{{ item.p_normal }}%</span>
+              </div>
+              <div class="history-stat">
+                <span class="stat-label">Fault:</span>
+                <span class="stat-value">{{ item.p_fault }}%</span>
+              </div>
+              <div class="history-stat">
+                <span class="stat-label">윈도:</span>
+                <span class="stat-value">{{ item.n_windows }}</span>
+              </div>
+              <div class="history-stat">
+                <span class="stat-label">신뢰도:</span>
+                <span class="stat-value">{{ '저신뢰' if item.low_conf else '정상' }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="history-actions">
+            <a href="{{ url_for('history_detail', item_id=item.id) }}" class="btn btn-secondary">📊 상세 보기</a>
+            <button onclick="deleteHistoryItem({{ item.id }})" class="btn btn-danger">🗑️ 삭제</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <!-- Empty State -->
+      <div class="card" style="text-align: center; padding: 60px 40px;">
+        <div style="font-size: 64px; margin-bottom: 20px;">📝</div>
+        <h2>분석 히스토리가 없습니다</h2>
+        <p style="margin-bottom: 30px; color: var(--text-secondary);">
+          첫 번째 베어링 분석을 시작해보세요!
+        </p>
+        <a href="{{ url_for('index') }}" class="btn">🚀 분석 시작하기</a>
+      </div>
+    {% endif %}
+
+    <!-- Back Button -->
+    <div style="text-align: center; margin: 40px 0;">
+      <a class="btn" href="{{ url_for('index') }}">🏠 홈으로 돌아가기</a>
+    </div>
+  </div>
+
+  <style>
+    .history-list {
+      margin-top: 30px;
+    }
+    
+    .history-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .history-item:hover {
+      background: var(--card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px var(--shadow);
+    }
+    
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    
+    .history-info {
+      flex: 1;
+    }
+    
+    .history-filename {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    
+    .history-timestamp {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .history-result {
+      margin-left: 16px;
+    }
+    
+    .history-details {
+      margin-bottom: 20px;
+    }
+    
+    .history-stats {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .history-stat {
+      display: flex;
+      gap: 4px;
+      font-size: 14px;
+    }
+    
+    .history-stat .stat-label {
+      color: var(--text-secondary);
+    }
+    
+    .history-stat .stat-value {
+      color: var(--text);
+      font-weight: 600;
+    }
+    
+    .history-actions {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .btn-danger {
+      background: var(--bad);
+      color: white;
+      border: none;
+    }
+    
+    .btn-danger:hover {
+      background: #e53e3e;
+      transform: translateY(-2px);
+    }
+    
+    @media (max-width: 768px) {
+      .history-header {
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .history-result {
+        margin-left: 0;
+        align-self: flex-start;
+      }
+      
+      .history-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      
+      .history-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply saved theme
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+
+    // Delete history item
+    function deleteHistoryItem(itemId) {
+      if (confirm('이 분석 결과를 삭제하시겠습니까?')) {
+        window.location.href = `/history/delete/${itemId}`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>사용 설명서 - Bearing Fault Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: inherit;">
+          <div class="logo-icon" style="color: inherit;">⚙️</div>
+          <span style="color: inherit;">Bearing Fault Analyzer</span>
+        </a>
+        <div class="header-info">
+          <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📚 히스토리</a>
+          <a href="{{ url_for('samples') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📦 샘플 데이터</a>
+          <a href="{{ url_for('manual') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">👀 사용 설명서</a>
+          <button class="theme-toggle" id="themeToggle" aria-label="테마 변경"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>👀 사용 설명서</h1>
+    
+    <!-- 시작하기 -->
+    <div class="card">
+      <h2>🚀 시작하기</h2>
+      <div class="manual-section">
+        <h3>1. 파일 업로드</h3>
+        <p>지원 형식: <strong>WAV 오디오 파일</strong> 또는 <strong>CSV 데이터 파일</strong></p>
+        <ul>
+          <li><strong>WAV 파일:</strong> 베어링 진동음을 녹음한 오디오 파일</li>
+          <li><strong>CSV 파일:</strong> 진동 센서 데이터 (마지막 1-2개 컬럼을 신호로 사용)</li>
+        </ul>
+        
+        <h3>2. 샘플링 레이트 설정</h3>
+        <p>기본값: <strong>25600 Hz</strong> (대부분의 경우 기본값 사용 권장)</p>
+        <p>WAV 파일의 경우 자동으로 리샘플링되며, CSV 파일의 경우 입력값이 적용됩니다.</p>
+        
+        <h3>3. 분석 실행</h3>
+        <p><strong>"🚀 분석 시작"</strong> 버튼을 클릭하면 AI 모델이 자동으로 분석을 수행합니다.</p>
+      </div>
+    </div>
+
+    <!-- 분석 결과 해석 -->
+    <div class="card">
+      <h2>📊 분석 결과 해석</h2>
+      
+      <div class="manual-section">
+        <h3>🎯 AI 진단 결과</h3>
+        <div class="result-examples">
+          <div class="result-item">
+            <span class="badge ok">Normal</span>
+            <p><strong>정상:</strong> 베어링 상태가 양호함을 의미</p>
+          </div>
+          <div class="result-item">
+            <span class="badge bad">Fault</span>
+            <p><strong>결함:</strong> 베어링에 문제가 있음을 의미 (정밀 검사 필요)</p>
+          </div>
+          <div class="result-item">
+            <span class="badge warn">Suspect</span>
+            <p><strong>의심:</strong> 애매한 상태 (추가 모니터링 권장)</p>
+          </div>
+        </div>
+
+        <h3>📈 확률 분포</h3>
+        <ul>
+          <li><strong>Normal 확률:</strong> 정상 상태일 가능성 (0-100%)</li>
+          <li><strong>Fault 확률:</strong> 결함 상태일 가능성 (0-100%)</li>
+          <li><strong>파이 차트:</strong> 두 확률의 시각적 비교</li>
+        </ul>
+
+        <h3>📈 멜 스펙트로그램</h3>
+        <p>진동 신호를 주파수-시간 영역으로 변환한 이미지입니다.</p>
+        <ul>
+          <li><strong>가로축:</strong> 시간 (Time)</li>
+          <li><strong>세로축:</strong> 주파수 (Frequency)</li>
+          <li><strong>색상:</strong> 에너지 강도 (밝을수록 강한 신호)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 앙상블 분석 -->
+    <div class="card">
+      <h2>🎯 앙상블 분석</h2>
+      
+      <div class="manual-section">
+        <h3>📊 윈도 통계</h3>
+        <ul>
+          <li><strong>윈도 개수:</strong> 신호를 분할한 구간 수 (더 많을수록 신뢰도 향상)</li>
+          <li><strong>평균 Fault 확률:</strong> 모든 윈도의 평균 결함 확률</li>
+          <li><strong>임계치 초과 비율:</strong> 0.7 이상의 높은 확률을 가진 윈도 비율</li>
+        </ul>
+
+        <h3>🔍 신뢰도 지표</h3>
+        <ul>
+          <li><strong>평균 Max-Softmax:</strong> 예측 신뢰도 (0.6 이상이면 신뢰할 만함)</li>
+          <li><strong>평균 엔트로피:</strong> 불확실성 지표 (낮을수록 확실한 예측)</li>
+          <li><strong>신뢰도 상태:</strong> 
+            <span class="badge ok">정상</span> 신뢰할 수 있음 / 
+            <span class="badge warn">저신뢰</span> 주의해서 해석</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 품질 관리 지표 -->
+    <div class="card">
+      <h2>🔧 품질 관리 (QC) 지표</h2>
+      
+      <div class="manual-section">
+        <h3>📏 신호 특성</h3>
+        <ul>
+          <li><strong>길이:</strong> 신호의 전체 길이 (초 단위)</li>
+          <li><strong>RMS:</strong> 신호의 효과값 (Root Mean Square)</li>
+          <li><strong>DC 오프셋:</strong> 신호의 직류 성분 (0에 가까워야 함)</li>
+          <li><strong>Crest factor:</strong> 피크값과 RMS의 비율 (1.2-15 범위가 정상)</li>
+        </ul>
+
+        <h3>📊 주파수 특성</h3>
+        <ul>
+          <li><strong>Clipping rate:</strong> 신호 포화 비율 (1% 이하 권장)</li>
+          <li><strong>ZCR:</strong> 제로 크로싱 비율 (신호 활동성 지표)</li>
+          <li><strong>Spectral centroid:</strong> 주파수 중심값 (Hz)</li>
+          <li><strong>Band-energy ratio:</strong> 고주파/저주파 에너지 비율</li>
+        </ul>
+
+        <h3>⚠️ 경고 시스템</h3>
+        <div class="warning-examples">
+          <div class="warning-item">
+            <span class="badge bad">ERROR</span>
+            <p><strong>오류:</strong> 심각한 문제 (재측정 필요)</p>
+          </div>
+          <div class="warning-item">
+            <span class="badge warn">WARN</span>
+            <p><strong>경고:</strong> 주의가 필요한 상태</p>
+          </div>
+          <div class="warning-item">
+            <span class="badge info">INFO</span>
+            <p><strong>정보:</strong> 참고사항</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 윈도 설정 -->
+    <div class="card">
+      <h2>⚙️ 윈도 설정</h2>
+      
+      <div class="manual-section">
+        <h3>📱 분석 모드</h3>
+        <ul>
+          <li><strong>표준 모드:</strong> 신호를 여러 구간으로 나누어 분석 (권장)</li>
+          <li><strong>단일 윈도 모드:</strong> 짧은 신호에 대한 전체 분석</li>
+        </ul>
+
+        <h3>🔧 기술 파라미터</h3>
+        <ul>
+          <li><strong>윈도 크기:</strong> 각 분석 구간의 길이 (0.2-1.0초)</li>
+          <li><strong>홉 크기:</strong> 윈도 간 겹침 정도 (윈도 크기의 절반)</li>
+          <li><strong>Fallback 모드:</strong> 신호가 너무 짧을 때 자동 적용</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 팁과 권장사항 -->
+    <div class="card">
+      <h2>💡 사용 팁 & 권장사항</h2>
+      
+      <div class="manual-section">
+        <h3>📁 파일 준비</h3>
+        <ul>
+          <li>베어링 회전 중 최소 1초 이상 녹음/측정</li>
+          <li>배경 소음이 적은 환경에서 측정</li>
+          <li>일정한 회전속도 유지</li>
+          <li>센서를 베어링 가까이 배치</li>
+        </ul>
+
+        <h3>🎯 결과 해석</h3>
+        <ul>
+          <li><strong>높은 신뢰도</strong> + <strong>Normal</strong> → 베어링 상태 양호</li>
+          <li><strong>높은 신뢰도</strong> + <strong>Fault</strong> → 정밀 검사 필요</li>
+          <li><strong>낮은 신뢰도</strong> → 추가 측정 또는 전문가 상담</li>
+          <li>QC 경고가 있으면 측정 조건 재점검</li>
+        </ul>
+
+        <h3>⚠️ 주의사항</h3>
+        <ul>
+          <li>이 도구는 보조 진단용이며, 최종 판단은 전문가와 상의</li>
+          <li>정기적인 모니터링을 통한 추세 분석 권장</li>
+          <li>측정 환경과 조건의 일관성 유지 중요</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 돌아가기 버튼 -->
+    <div style="text-align: center; margin: 40px 0;">
+      <a class="btn" href="{{ url_for('index') }}">🏠 홈으로 돌아가기</a>
+    </div>
+  </div>
+
+  <style>
+    .manual-section {
+      margin-bottom: 24px;
+    }
+    
+    .manual-section h3 {
+      color: var(--accent);
+      margin-top: 20px;
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+    
+    .manual-section ul {
+      margin-left: 20px;
+      margin-bottom: 16px;
+    }
+    
+    .manual-section li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    
+    .result-examples, .warning-examples {
+      display: grid;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    
+    .result-item, .warning-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    
+    .result-item p, .warning-item p {
+      margin: 0;
+      flex: 1;
+    }
+  </style>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply saved theme
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+  </script>
+</body>
+</html>

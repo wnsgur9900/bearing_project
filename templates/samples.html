@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>샘플 데이터 - Bearing Fault Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: inherit;">
+          <div class="logo-icon" style="color: inherit;">⚙️</div>
+          <span style="color: inherit;">Bearing Fault Analyzer</span>
+        </a>
+        <div class="header-info">
+          <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📚 히스토리</a>
+          <a href="{{ url_for('samples') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📦 샘플 데이터</a>
+          <a href="{{ url_for('manual') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">👀 사용 설명서</a>
+          <button class="theme-toggle" id="themeToggle" aria-label="테마 변경"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>📦 샘플 데이터</h1>
+    
+    <!-- Info Section -->
+    <div class="card">
+      <h2>💡 샘플 데이터 정보</h2>
+      <p>테스트 및 학습 목적으로 사용할 수 있는 샘플 베어링 진동 데이터입니다. 실제 베어링의 진동 특성을 모사하여 생성된 합성 데이터입니다.</p>
+      
+      <div class="grid-2" style="margin-top: 20px;">
+        <div>
+          <h3>📊 데이터 형식</h3>
+          <ul>
+            <li><strong>파일 형식:</strong> CSV</li>
+            <li><strong>샘플링 레이트:</strong> 25,600 Hz</li>
+            <li><strong>지속 시간:</strong> 2초</li>
+            <li><strong>채널:</strong> X, Y 축 진동</li>
+          </ul>
+        </div>
+        <div>
+          <h3>🎯 사용 용도</h3>
+          <ul>
+            <li>AI 모델 테스트</li>
+            <li>인터페이스 기능 확인</li>
+            <li>분석 결과 비교</li>
+            <li>학습 및 데모 용도</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sample Files Grid -->
+    <div class="grid-2">
+      {% for sample in samples %}
+      <div class="card sample-card">
+        <div class="sample-header">
+          <div class="sample-icon">
+            {% if sample.name.startswith('Normal') %}
+              ✅
+            {% else %}
+              ⚠️
+            {% endif %}
+          </div>
+          <div class="sample-title">{{ sample.name }}</div>
+        </div>
+        
+        <div class="sample-info">
+          <p>{{ sample.description }}</p>
+          
+          <div class="sample-details">
+            <div class="detail-item">
+              <span class="detail-label">형식:</span>
+              <span class="badge info">{{ sample.type }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">크기:</span>
+              <span>{{ sample.size }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">파일명:</span>
+              <span class="filename">{{ sample.filename }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="sample-actions">
+          <a href="{{ url_for('download_sample', filename=sample.filename) }}" 
+             class="btn" 
+             style="width: 100%; text-decoration: none; display: inline-block; text-align: center;">
+            📥 다운로드
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Usage Instructions -->
+    <div class="card">
+      <h2>📋 사용 방법</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>샘플 파일 다운로드</h3>
+            <p>위의 "다운로드" 버튼을 클릭하여 원하는 샘플 파일을 다운로드합니다.</p>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>홈페이지에서 업로드</h3>
+            <p>다운로드한 파일을 <a href="{{ url_for('index') }}">홈페이지</a>의 파일 업로드 섹션에 업로드합니다.</p>
+          </div>
+        </div>
+        
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>분석 결과 확인</h3>
+            <p>AI 모델의 분석 결과를 확인하고, 정상/결함 샘플 간의 차이를 비교해보세요.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Button -->
+    <div style="text-align: center; margin: 40px 0;">
+      <a class="btn" href="{{ url_for('index') }}">🏠 홈으로 돌아가기</a>
+    </div>
+  </div>
+
+  <style>
+    .sample-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+    
+    .sample-card:hover {
+      background: var(--card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px var(--shadow);
+    }
+    
+    .sample-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .sample-icon {
+      font-size: 24px;
+    }
+    
+    .sample-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .sample-info {
+      margin-bottom: 20px;
+    }
+    
+    .sample-details {
+      margin-top: 16px;
+    }
+    
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .detail-label {
+      color: var(--text-secondary);
+      min-width: 50px;
+    }
+    
+    .filename {
+      font-family: 'Courier New', monospace;
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .steps {
+      margin-top: 20px;
+    }
+    
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--gradient-accent);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    
+    .step-content h3 {
+      margin: 0 0 8px 0;
+      color: var(--text);
+      font-size: 16px;
+    }
+    
+    .step-content p {
+      margin: 0;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    
+    .step-content a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    
+    .step-content a:hover {
+      text-decoration: underline;
+    }
+  </style>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply saved theme
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+  </script>
+</body>
+</html>

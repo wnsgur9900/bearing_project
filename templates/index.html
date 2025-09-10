@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bearing Fault Analyzer - AI-Powered Vibration Analysis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: inherit;">
+          <div class="logo-icon">⚙️</div>
+          <span>Bearing Fault Analyzer</span>
+        </a>
+        <div class="header-info">
+          <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📚 히스토리</a>
+          <a href="{{ url_for('samples') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📦 샘플 데이터</a>
+          <a href="{{ url_for('manual') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">👀 사용 설명서</a>
+          <button class="theme-toggle" id="themeToggle" aria-label="테마 변경"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <h1>🔧 베어링 결함 분석기</h1>
+      <p style="font-size: 18px; color: var(--text-secondary); margin-bottom: 30px; text-align: center;">
+        AI 기반 진동 신호 분석으로 베어링 상태를 정확하게 진단하세요
+      </p>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">
+          {% for m in messages %}<p>{{ m }}</p>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Upload Section -->
+    <div class="upload-section">
+      <div class="upload-header">
+        <h2>📁 파일 업로드</h2>
+        <p>진동 신호 파일을 업로드하여 AI 분석을 시작하세요</p>
+      </div>
+
+      <form action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+        <div class="file-upload-area">
+      
+          <!-- ⬇️ 파일정보 블록을 위로 이동 -->
+          <div id="fileInfo" class="file-info" style="display: none;">
+            <!-- <div id="fileName"></div> -->
+            <div class="file-meta">
+              <span id="fileName"></span><span id="fileSize"></span> · <span id="fileType"></span>
+            </div>
+          </div>
+
+          <!-- Audio Player for WAV files -->
+          <div id="audioPlayer" class="audio-player">
+            <div class="audio-controls">
+              <button id="playBtn" class="play-btn">▶️</button>
+              <div class="audio-info">
+                <div id="audioFileName">-</div>
+                <div id="audioDuration">Duration: --:--</div>
+              </div>
+            </div>
+            <div class="waveform">
+              <div class="waveform-bars" id="waveformBars">
+                <!-- Waveform bars will be generated here -->
+              </div>
+            </div>
+            <audio id="audioElement" preload="metadata"></audio>
+          </div>
+      
+          <div class="file-input-wrapper">
+            <input type="file" name="file" id="fileInput" class="file-input" accept=".wav,.csv" required />
+            <label for="fileInput" class="file-input-label">
+              <span class="upload-icon">📤</span>
+              <span class="upload-text">파일 선택하기</span>
+            </label>
+          </div>
+        </div>
+      
+        <div class="form-row">
+          <div class="form-group">
+            <label for="sr">🎵 샘플링 레이트 (Hz)</label>
+            <input type="number" name="sr" id="sr" value="25600" min="1000" step="100" placeholder="기본값: 25600" />
+          </div>
+      
+          <!-- ⬇️ 입력창과 같은 줄에서 정렬됨 -->
+          <button type="submit" class="analyze-btn" id="submitBtn">
+            <span id="btnText">🚀 분석 시작</span>
+            <span id="btnLoading" class="loading" style="display: none;"></span>
+          </button>
+        </div>
+      </form>
+
+    <!-- Progress Overlay -->
+    <div class="progress-overlay" id="progressOverlay">
+      <div class="progress-container">
+        <div class="progress-title">🔍 AI 분석 진행 중...</div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">준비 중...</div>
+        <div class="progress-steps">
+          <div class="progress-step" id="step1">
+            <div class="progress-step-icon">📁</div>
+            <span>파일 업로드</span>
+          </div>
+          <div class="progress-step" id="step2">
+            <div class="progress-step-icon">🎵</div>
+            <span>신호 처리</span>
+          </div>
+          <div class="progress-step" id="step3">
+            <div class="progress-step-icon">📊</div>
+            <span>스펙트로그램 생성</span>
+          </div>
+          <div class="progress-step" id="step4">
+            <div class="progress-step-icon">🤖</div>
+            <span>AI 모델 분석</span>
+          </div>
+          <div class="progress-step" id="step5">
+            <div class="progress-step-icon">📈</div>
+            <span>결과 생성</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+      <h2>✨ 주요 기능</h2>
+      <div class="features-row">
+        <div class="feature-item">
+          <div class="feature-icon">🎯</div>
+          <div class="feature-title">정확한 진단</div>
+          <div class="feature-desc">ResNet50 AI 모델을 통한 고정밀 베어링 상태 분석</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📊</div>
+          <div class="feature-title">멜 스펙트로그램</div>
+          <div class="feature-desc">진동 신호를 시각적으로 변환하여 패턴 분석</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-title">실시간 분석</div>
+          <div class="feature-desc">빠른 처리 속도로 즉시 결과 확인</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔍</div>
+          <div class="feature-title">다양한 형식</div>
+          <div class="feature-desc">WAV, CSV 등 다양한 데이터 형식 지원</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply saved theme
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    });
+
+    // Audio player functionality
+    let audioElement = null;
+    let isPlaying = false;
+
+    function generateWaveform() {
+      const waveformBars = document.getElementById('waveformBars');
+      waveformBars.innerHTML = '';
+      
+      for (let i = 0; i < 50; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'waveform-bar';
+        bar.style.height = Math.random() * 80 + 20 + '%';
+        waveformBars.appendChild(bar);
+      }
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // File input handling
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      const fileInfo = document.getElementById('fileInfo');
+      const fileName = document.getElementById('fileName');
+      const fileSize = document.getElementById('fileSize');
+      const fileType = document.getElementById('fileType');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const audioFileName = document.getElementById('audioFileName');
+      const audioDuration = document.getElementById('audioDuration');
+      
+      if (file) {
+        fileName.textContent = `📄 ${file.name}`;
+        fileSize.textContent = `📏 ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+        fileType.textContent = `📋 ${file.type || file.name.split('.').pop().toUpperCase()}`;
+        fileInfo.style.display = 'block';
+        
+        // Show audio player for WAV files
+        if (file.name.toLowerCase().endsWith('.wav')) {
+          audioPlayer.style.display = 'block';
+          audioFileName.textContent = file.name;
+          
+          // Create audio element
+          if (audioElement) {
+            audioElement.pause();
+          }
+          
+          audioElement = document.getElementById('audioElement');
+          const audioURL = URL.createObjectURL(file);
+          audioElement.src = audioURL;
+          
+          // Generate waveform visualization
+          generateWaveform();
+          
+          audioElement.addEventListener('loadedmetadata', function() {
+            audioDuration.textContent = `Duration: ${formatTime(audioElement.duration)}`;
+          });
+          
+          audioElement.addEventListener('timeupdate', function() {
+            const progress = (audioElement.currentTime / audioElement.duration) * 100;
+            const bars = document.querySelectorAll('.waveform-bar');
+            const activeIndex = Math.floor((progress / 100) * bars.length);
+            
+            bars.forEach((bar, index) => {
+              if (index <= activeIndex) {
+                bar.classList.add('active');
+              } else {
+                bar.classList.remove('active');
+              }
+            });
+          });
+          
+          audioElement.addEventListener('ended', function() {
+            isPlaying = false;
+            document.getElementById('playBtn').textContent = '▶️';
+            document.querySelectorAll('.waveform-bar').forEach(bar => {
+              bar.classList.remove('active');
+            });
+          });
+          
+        } else {
+          audioPlayer.style.display = 'none';
+        }
+      } else {
+        fileInfo.style.display = 'none';
+        audioPlayer.style.display = 'none';
+      }
+    });
+
+    // Play/Pause button functionality
+    document.getElementById('playBtn').addEventListener('click', function() {
+      if (!audioElement) return;
+      
+      if (isPlaying) {
+        audioElement.pause();
+        this.textContent = '▶️';
+        isPlaying = false;
+      } else {
+        audioElement.play();
+        this.textContent = '⏸️';
+        isPlaying = true;
+      }
+    });
+
+    // Progress bar functionality
+    function showProgress() {
+      const overlay = document.getElementById('progressOverlay');
+      const progressBar = document.getElementById('progressBarFill');
+      const progressText = document.getElementById('progressText');
+      
+      overlay.style.display = 'flex';
+      
+      const steps = [
+        { id: 'step1', text: '파일 업로드 중...', progress: 20 },
+        { id: 'step2', text: '신호 처리 중...', progress: 40 },
+        { id: 'step3', text: '스펙트로그램 생성 중...', progress: 60 },
+        { id: 'step4', text: 'AI 모델 분석 중...', progress: 80 },
+        { id: 'step5', text: '결과 생성 중...', progress: 100 }
+      ];
+      
+      let currentStep = 0;
+      
+      function updateStep() {
+        if (currentStep > 0) {
+          document.getElementById(steps[currentStep - 1].id).classList.add('completed');
+          document.getElementById(steps[currentStep - 1].id).classList.remove('active');
+        }
+        
+        if (currentStep < steps.length) {
+          document.getElementById(steps[currentStep].id).classList.add('active');
+          progressText.textContent = steps[currentStep].text;
+          progressBar.style.width = steps[currentStep].progress + '%';
+          currentStep++;
+          
+          setTimeout(updateStep, 1500 + Math.random() * 1000);
+        }
+      }
+      
+      setTimeout(updateStep, 500);
+    }
+
+    // Form submission handling
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const btnLoading = document.getElementById('btnLoading');
+      
+      submitBtn.disabled = true;
+      btnText.style.display = 'none';
+      btnLoading.style.display = 'inline-block';
+      
+      // Show progress overlay
+      showProgress();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>분석 결과 - Bearing Fault Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="{{ url_for('index') }}" class="logo" style="text-decoration: none; color: inherit;">
+          <div class="logo-icon" style="color: inherit;">⚙️</div>
+          <span style="color: inherit;">Bearing Fault Analyzer</span>
+        </a>
+        <div class="header-info">
+          <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📚 히스토리</a>
+          <a href="{{ url_for('samples') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">📦 샘플 데이터</a>
+          <a href="{{ url_for('manual') }}" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; text-decoration: none; margin-right: 8px;">👀 사용 설명서</a>
+          <button class="theme-toggle" id="themeToggle" aria-label="테마 변경"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <h1>📊 분석 결과</h1>
+    
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">{{ p_normal }}%</div>
+        <div class="stat-label">Normal 확률</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ p_fault }}%</div>
+        <div class="stat-label">Fault 확률</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ sr }}</div>
+        <div class="stat-label">샘플링 레이트</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ filename[:20] }}{% if filename|length > 20 %}...{% endif %}</div>
+        <div class="stat-label">분석 파일</div>
+      </div>
+    </div>
+
+    <!-- Main Results Grid -->
+    <div class="grid-2">
+      <!-- Prediction Card -->
+      <div class="card prediction-card">
+        <h2>🎯 AI 진단 결과</h2>
+        <div class="pred {{ 'ok' if pred=='Normal' else 'bad' }}">
+          {{ pred }}
+        </div>
+        
+        <div class="progress-container">
+          <h3>Fault 확률</h3>
+          <div class="progress-bar">
+            <div class="progress-fill fault" style="width: {{ p_fault }}%"></div>
+          </div>
+          <p style="text-align: center; margin-top: 8px; font-weight: 600;">
+            {{ p_fault }}% ({{ '높음' if p_fault > 50 else '낮음' }})
+          </p>
+        </div>
+
+        <div class="progress-container">
+          <h3>Normal 확률</h3>
+          <div class="progress-bar">
+            <div class="progress-fill normal" style="width: {{ p_normal }}%"></div>
+          </div>
+          <p style="text-align: center; margin-top: 8px; font-weight: 600;">
+            {{ p_normal }}% ({{ '높음' if p_normal > 50 else '낮음' }})
+          </p>
+        </div>
+      </div>
+
+      <!-- Spectrogram Card -->
+      <div class="card spec-container">
+        <h2>📈 멜 스펙트로그램</h2>
+        <img src="{{ spec_url }}" alt="spectrogram" class="spec-img"/>
+        <p style="margin-top: 16px; color: var(--text-secondary); text-align: center;">
+          진동 신호의 주파수 특성을 시각화한 멜 스펙트로그램
+        </p>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="chart-container" style="max-width: 500px; margin: 0 auto;">
+      <h3 class="chart-title">확률 분포</h3>
+      <div style="position: relative; height: 300px; width: 100%;">
+        <canvas id="probabilityChart"></canvas>
+      </div>
+      <div style="margin-top: 20px; text-align: center;">
+        <div style="display: inline-block; margin: 0 20px;">
+          <div style="display: inline-block; width: 20px; height: 20px; background: rgba(0, 255, 136, 0.8); border-radius: 4px; margin-right: 8px; vertical-align: middle;"></div>
+          <span style="color: var(--text); font-weight: 600;">정상 (Normal)</span>
+        </div>
+        <div style="display: inline-block; margin: 0 20px;">
+          <div style="display: inline-block; width: 20px; height: 20px; background: rgba(255, 71, 87, 0.8); border-radius: 4px; margin-right: 8px; vertical-align: middle;"></div>
+          <span style="color: var(--text); font-weight: 600;">비정상 (Fault)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ensemble Analysis -->
+    <div class="card">
+      <h2>🎯 앙상블 분석</h2>
+      <div class="grid-3">
+        <div>
+          <h3>📊 윈도 통계</h3>
+          <p><strong>윈도 개수:</strong> <b>{{ n_windows }}</b></p>
+          <p><strong>평균 Fault 확률:</strong> <b>{{ p_fault }}%</b></p>
+          <p><strong>임계치(0.7) 초과 윈도 비율:</strong> <b>{{ over_th }}%</b></p>
+        </div>
+        <div>
+          <h3>🔍 신뢰도 지표</h3>
+          <p><strong>평균 Max-Softmax:</strong> <b>{{ mean_maxp }}</b> 
+            {% if low_conf %}<span class="badge warn">Low confidence</span>{% endif %}</p>
+          <p><strong>평균 엔트로피:</strong> <b>{{ mean_entropy }}</b></p>
+          <p><strong>신뢰도 상태:</strong> 
+            {% if low_conf %}
+              <span class="badge warn">저신뢰</span>
+            {% else %}
+              <span class="badge ok">정상</span>
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <h3>📈 최종 판단</h3>
+          <p><strong>결정 규칙:</strong> 앙상블 기반</p>
+          <p><strong>윈도 크기:</strong> 1.0초</p>
+          <p><strong>오버랩:</strong> 0.5초</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Window Settings -->
+    <div class="card">
+      <h2>⚙️ 윈도 설정</h2>
+      {% if short_mode %}
+        <p><span class="badge warn">Short-signal mode</span> 길이가 짧아 전체 신호/단축 윈도우로 분석했습니다.</p>
+      {% else %}
+        <p><span class="badge ok">Standard</span> 표준 윈도 설정으로 분석했습니다.</p>
+      {% endif %}
+      <div class="grid-3">
+        <div>
+          <p><strong>사용한 윈도:</strong> <b>{{ "%.2f"|format(win_used) }} s</b></p>
+          <p><strong>홉 크기:</strong> <b>{{ "%.2f"|format(hop_used) }} s</b></p>
+        </div>
+        <div>
+          <p><strong>윈도 개수:</strong> <b>{{ n_windows }}</b></p>
+          <p><strong>신호 길이:</strong> <b>{{ "%.2f"|format(qc.length_sec) }} s</b></p>
+        </div>
+        <div>
+          <p><strong>분석 모드:</strong> 
+            {% if short_mode %}
+              <span class="badge warn">단일 윈도</span>
+            {% else %}
+              <span class="badge ok">다중 윈도</span>
+            {% endif %}
+          </p>
+          <p><strong>Fallback 사용:</strong> 
+            {% if short_mode %}
+              <span class="badge info">예</span>
+            {% else %}
+              <span class="badge ok">아니오</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QC Metrics -->
+    <div class="card">
+      <h2>🔧 품질(QC) 지표</h2>
+      <div class="grid-2">
+        <div>
+          <h3>📏 신호 특성</h3>
+          <ul style="list-style: none; padding: 0;">
+            <li><strong>길이:</strong> {{ "%.2f"|format(qc.length_sec) }} s</li>
+            <li><strong>RMS:</strong> {{ "%.6f"|format(qc.rms) }}</li>
+            <li><strong>DC 오프셋:</strong> {{ "%.6f"|format(qc.dc_offset) }}</li>
+            <li><strong>Crest factor:</strong> {{ "%.2f"|format(qc.crest_factor) }}</li>
+          </ul>
+        </div>
+        <div>
+          <h3>📊 주파수 특성</h3>
+          <ul style="list-style: none; padding: 0;">
+            <li><strong>Clipping rate:</strong> {{ "%.2f"|format(qc.clipping_rate * 100) }}%</li>
+            <li><strong>ZCR:</strong> {{ "%.4f"|format(qc.zcr) }}</li>
+            <li><strong>Spectral centroid:</strong> {{ "%.1f"|format(qc.spectral_centroid) }} Hz</li>
+            <li><strong>Band-energy ratio:</strong> {{ "%.3f"|format(qc.band_energy_ratio) }}</li>
+          </ul>
+        </div>
+      </div>
+
+      {% if warns and warns|length > 0 %}
+        <h3 style="margin-top: 20px;">⚠️ 경고 및 알림</h3>
+        <div style="margin-top: 10px;">
+          {% for level, msg in warns %}
+            <div style="margin: 8px 0; padding: 8px 12px; border-radius: 6px; 
+                        background: {% if level=='error' %}rgba(231, 76, 60, 0.1){% elif level=='warn' %}rgba(241, 196, 15, 0.1){% else %}rgba(52, 152, 219, 0.1){% endif %}; 
+                        border-left: 4px solid {% if level=='error' %}var(--bad){% elif level=='warn' %}var(--warning){% else %}var(--accent){% endif %};">
+              <span class="badge {{ 'bad' if level=='error' else ('warn' if level=='warn' else 'info') }}">{{ level.upper() }}</span> 
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="margin-top: 20px; text-align: center; padding: 16px; background: rgba(0, 255, 136, 0.1); border-radius: 8px; border: 1px solid var(--good);">
+          <span class="badge ok">OK</span> <strong>이상 징후 없음</strong>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Frequency Analysis -->
+    <div class="card">
+      <h2>🔬 상세 주파수 분석</h2>
+      
+      <!-- Spectrum Chart -->
+      <div class="freq-chart-container">
+        <h3>주파수 스펙트럼</h3>
+        <canvas id="spectrumChart" width="800" height="300"></canvas>
+      </div>
+      
+      <!-- Peak Analysis -->
+      <div class="grid-2" style="margin-top: 30px;">
+        <div>
+          <h3>🎯 주요 주파수 피크</h3>
+          <div class="peaks-list">
+            {% for i in range(freq_analysis.peaks.frequencies|length) %}
+            <div class="peak-item">
+              <span class="peak-freq">{{ "%.1f"|format(freq_analysis.peaks.frequencies[i]) }} Hz</span>
+              <span class="peak-magnitude">{{ "%.2e"|format(freq_analysis.peaks.magnitudes[i]) }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        
+        <div>
+          <h3>📊 주파수 대역별 에너지</h3>
+          <div class="band-energies">
+            {% for band_name, band_data in freq_analysis.band_energies.items() %}
+            <div class="band-item">
+              <div class="band-info">
+                <span class="band-name">{{ band_name }}</span>
+                <span class="band-percentage">{{ "%.1f"|format(band_data.percentage) }}%</span>
+              </div>
+              <div class="band-bar">
+                <div class="band-fill" style="width: {{ band_data.percentage }}%"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Spectral Statistics -->
+      <div class="grid-2" style="margin-top: 30px;">
+        <div>
+          <h3>📈 스펙트럼 통계</h3>
+          <div class="stats-table">
+            <div class="stat-row">
+              <span class="stat-name">중심 주파수:</span>
+              <span class="stat-value">{{ "%.1f"|format(freq_analysis.statistics.spectral_centroid) }} Hz</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">분산 (Spread):</span>
+              <span class="stat-value">{{ "%.1f"|format(freq_analysis.statistics.spectral_spread) }} Hz</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">비대칭도 (Skewness):</span>
+              <span class="stat-value">{{ "%.3f"|format(freq_analysis.statistics.spectral_skewness) }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-name">첨도 (Kurtosis):</span>
+              <span class="stat-value">{{ "%.3f"|format(freq_analysis.statistics.spectral_kurtosis) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h3>🎼 하모닉 분석</h3>
+          {% if freq_analysis.harmonics %}
+          <div class="harmonics-list">
+            {% for harmonic in freq_analysis.harmonics %}
+            <div class="harmonic-item">
+              <span class="harmonic-order">{{ harmonic.order }}차</span>
+              <span class="harmonic-freq">{{ "%.1f"|format(harmonic.frequency) }} Hz</span>
+              <span class="harmonic-magnitude">{{ "%.2e"|format(harmonic.magnitude) }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p style="color: var(--text-secondary);">명확한 하모닉 패턴이 감지되지 않았습니다.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Analysis -->
+    <div class="card">
+      <h2>🔍 상세 분석 정보</h2>
+      <div class="grid-3">
+        <div>
+          <h3>📁 파일 정보</h3>
+          <p><strong>파일명:</strong> {{ filename }}</p>
+          <p><strong>샘플링 레이트:</strong> {{ sr }} Hz</p>
+          <p><strong>분석 시간:</strong> <span id="analysisTime"></span></p>
+        </div>
+        <div>
+          <h3>🤖 AI 모델 정보</h3>
+          <p><strong>모델:</strong> ResNet50 (1채널)</p>
+          <p><strong>입력 크기:</strong> 224×224</p>
+          <p><strong>전처리:</strong> Grayscale, Normalize</p>
+        </div>
+        <div>
+          <h3>📊 신호 처리</h3>
+          <p><strong>변환:</strong> 멜 스펙트로그램</p>
+          <p><strong>FFT 크기:</strong> 1024</p>
+          <p><strong>멜 빈:</strong> 128</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="text-align: center; margin: 40px 0;">
+      <a class="btn" href="{{ url_for('index') }}">🔄 새 분석하기</a>
+      <button class="btn btn-secondary" onclick="window.print()" style="margin-left: 16px;">🖨️ 결과 인쇄</button>
+    </div>
+
+  </div>
+
+  <script>
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    
+    // Apply saved theme
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      
+      // Update chart colors when theme changes
+      updateChartTheme();
+    });
+
+    // Function to update chart theme
+    function updateChartTheme() {
+      const colors = getChartTextColors();
+      
+      // Update probability chart
+      probabilityChart.options.plugins.tooltip.backgroundColor = colors.tooltip.background;
+      probabilityChart.options.plugins.tooltip.titleColor = colors.tooltip.text;
+      probabilityChart.options.plugins.tooltip.bodyColor = colors.tooltip.text;
+      probabilityChart.options.plugins.tooltip.borderColor = colors.tooltip.border;
+      probabilityChart.update();
+      
+      // Update spectrum chart
+      spectrumChart.options.plugins.tooltip.backgroundColor = colors.tooltip.background;
+      spectrumChart.options.plugins.tooltip.titleColor = colors.tooltip.text;
+      spectrumChart.options.plugins.tooltip.bodyColor = colors.tooltip.text;
+      spectrumChart.options.plugins.tooltip.borderColor = colors.tooltip.border;
+      
+      spectrumChart.options.scales.x.title.color = colors.text;
+      spectrumChart.options.scales.x.ticks.color = colors.text;
+      spectrumChart.options.scales.y.title.color = colors.text;
+      spectrumChart.options.scales.y.ticks.color = colors.text;
+      
+      spectrumChart.update();
+    }
+
+    // Set analysis time
+    document.getElementById('analysisTime').textContent = new Date().toLocaleString('ko-KR');
+
+    // Probability Pie Chart
+    const probCtx = document.getElementById('probabilityChart').getContext('2d');
+    const probabilityChart = new Chart(probCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['정상 (Normal)', '비정상 (Fault)'],
+        datasets: [{
+          data: [{{ p_normal }}, {{ p_fault }}],
+          backgroundColor: [
+            'rgba(0, 255, 136, 0.8)',
+            'rgba(255, 71, 87, 0.8)'
+          ],
+          borderColor: [
+            'rgba(0, 255, 136, 1)',
+            'rgba(255, 71, 87, 1)'
+          ],
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 1,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed;
+                return `${label}: ${value}%`;
+              }
+            },
+            backgroundColor: getChartTextColors().tooltip.background,
+            titleColor: getChartTextColors().tooltip.text,
+            bodyColor: getChartTextColors().tooltip.text,
+            borderColor: getChartTextColors().tooltip.border,
+            borderWidth: 1
+          }
+        }
+      }
+    });
+
+    // Function to get theme-based colors
+    function getChartTextColors() {
+      const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+      return {
+        text: theme === 'dark' ? '#ffffff' : '#333333',
+        tooltip: {
+          background: theme === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.95)',
+          text: theme === 'dark' ? '#ffffff' : '#333333',
+          border: theme === 'dark' ? '#ffffff' : '#333333'
+        }
+      };
+    }
+
+    // Frequency Spectrum Chart
+    const spectrumCtx = document.getElementById('spectrumChart').getContext('2d');
+    const freqData = {{ freq_analysis.spectrum.frequencies | safe }};
+    const magnitudeData = {{ freq_analysis.spectrum.magnitudes | safe }};
+    
+    const spectrumChart = new Chart(spectrumCtx, {
+      type: 'line',
+      data: {
+        labels: freqData.map(f => f.toFixed(0)),
+        datasets: [{
+          label: 'Magnitude',
+          data: magnitudeData,
+          borderColor: 'rgba(0, 212, 255, 0.8)',
+          backgroundColor: 'rgba(0, 212, 255, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: getChartTextColors().tooltip.background,
+            titleColor: getChartTextColors().tooltip.text,
+            bodyColor: getChartTextColors().tooltip.text,
+            borderColor: getChartTextColors().tooltip.border,
+            borderWidth: 1,
+            callbacks: {
+              title: function(context) {
+                return `주파수: ${context[0].label} Hz`;
+              },
+              label: function(context) {
+                return `크기: ${context.parsed.y.toExponential(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: '주파수 (Hz)',
+              color: getChartTextColors().text
+            },
+            grid: {
+              color: 'var(--border)'
+            },
+            ticks: {
+              color: getChartTextColors().text,
+              maxTicksLimit: 10
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Magnitude',
+              color: getChartTextColors().text
+            },
+            grid: {
+              color: 'var(--border)'
+            },
+            ticks: {
+              color: getChartTextColors().text,
+              callback: function(value) {
+                return value.toExponential(1);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Add some animation effects
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.6s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+    });
+  </script>
+</body>
+</html>
